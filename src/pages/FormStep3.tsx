@@ -1,29 +1,37 @@
-// 27. Оптимизированная версия FormStep3.tsx с обновленной ConfirmationModal и хранением состояния в сторе (Zustand)
-import React, { useCallback, useState, FC } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import './FormStep3.scss';
-import { useFormStore } from '../store/formStore';
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmationModal from '@/components/ConfirmationModal';
+import ControlledSlider from '@/components/ControlledSlider';
+import Layout from '@/components/Layout ';
+import { UNIT_TYPES } from '@/constants/constants';
+import { useFormStore, useSubmitForm } from '@/store/formStore';
+import { sliderValidationSchema } from '@/utils/validationUtils';
 
-interface FormData {
+import { FC, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+
+import { yupResolver } from '@hookform/resolvers/yup';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
+
+interface IFormData {
     loanAmount: number;
     loanTerm: number;
 }
 
-const validationSchema = yup.object({
-    loanAmount: yup.number().min(200).max(1000).required('Сумма займа обязательна'),
-    loanTerm: yup.number().min(10).max(30).required('Срок займа обязателен'),
-});
-
 const FormStep3: FC = () => {
     const navigate = useNavigate();
-    const { formData, updateFormData } = useFormStore();
-
-    const { control, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
-        resolver: yupResolver(validationSchema),
+    const { formData, updateFormData, resetForm, toggleModalOpen, isModalOpen } = useFormStore();
+    const [responseData, setResponseData] = useState<{
+        fullName: string;
+        amount: number;
+        term: number;
+    } | null>(null);
+    const { mutate, isPending: isLoading, error } = useSubmitForm();
+    const {
+        control,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<IFormData>({
+        resolver: yupResolver(sliderValidationSchema),
         mode: 'onBlur',
         defaultValues: {
             loanAmount: formData.loanAmount || 200,
@@ -31,86 +39,93 @@ const FormStep3: FC = () => {
         },
     });
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [approvedAmount, setApprovedAmount] = useState(0);
-    const [approvedTerm, setApprovedTerm] = useState(0);
-
-    const loanAmount = watch('loanAmount');
-    const loanTerm = watch('loanTerm');
-
-    const onSubmit = useCallback((data: FormData) => {
+    const onSubmit = (data: IFormData) => {
         updateFormData(data);
-        fetch('https://dummyjson.com/products/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: `Займ на сумму ${data.loanAmount}$ сроком на ${data.loanTerm} дней` })
-        })
-            .then((response) => response.json())
-            .then((result) => {
-                setApprovedAmount(result.loanAmount || data.loanAmount);
-                setApprovedTerm(result.loanTerm || data.loanTerm);
-                setIsModalOpen(true);
-            })
-            .catch((error) => console.error('Ошибка отправки:', error));
-    }, [updateFormData]);
+        mutate(formData, {
+            onSuccess: () => {
+                setResponseData({
+                    fullName: `${formData.firstName} ${formData.lastName}`,
+                    amount: data.loanAmount,
+                    term: data.loanTerm,
+                });
+                toggleModalOpen(true);
+                localStorage.removeItem('formData');
+                resetForm();
+            },
+        });
+    };
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/');
+        }
+    };
+
+    const handleClose = () => {
+        toggleModalOpen(false);
+        navigate('/');
+        localStorage.removeItem('formDataStep1');
+        localStorage.removeItem('formDataStep2');
+    };
 
     return (
-        <div className="form-wrapper">
-            <div className="form-container">
-                <h2 className="form-title">Параметры займа</h2>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="form-group">
-                        <label htmlFor="loanAmount">Сумма займа: {loanAmount}$</label>
-                        <Controller
-                            name="loanAmount"
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    type="range"
-                                    min="200"
-                                    max="1000"
-                                    step="100"
-                                    className="form-control"
-                                    {...field}
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.loanAmount?.message}</div>
-                    </div>
+        <Layout>
+            {error && <Typography color="error">{error.message}</Typography>}
 
-                    <div className="form-group">
-                        <label htmlFor="loanTerm">Срок займа: {loanTerm} дней</label>
-                        <Controller
-                            name="loanTerm"
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    type="range"
-                                    min="10"
-                                    max="30"
-                                    step="1"
-                                    className="form-control"
-                                    {...field}
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.loanTerm?.message}</div>
-                    </div>
+            <Typography mb={3} variant="h5" textAlign="center">
+                Параметры займа
+            </Typography>
 
-                    <div className="button-group">
-                        <button type="button" className="back-button" onClick={() => navigate('/step2')}>Назад</button>
-                        <button type="submit" className="submit-button">Подать заявку</button>
-                    </div>
-                </form>
-            </div>
-            <ConfirmationModal
-                isOpen={isModalOpen}
-                onClose={() => navigate('/')}
-                fullName={`${formData.lastName} ${formData.firstName}`}
-                loanAmount={approvedAmount}
-                loanTerm={approvedTerm}
-            />
-        </div>
+            <form onSubmit={handleSubmit(onSubmit)}>
+                <ControlledSlider
+                    name="loanAmount"
+                    error={errors.loanAmount?.message}
+                    control={control}
+                    label="Сумма займа"
+                    min={200}
+                    max={1000}
+                    step={100}
+                    unit={UNIT_TYPES.CURRENCY}
+                />
+
+                <ControlledSlider
+                    name="loanTerm"
+                    error={errors.loanTerm?.message}
+                    control={control}
+                    label="Срок займа"
+                    min={10}
+                    max={30}
+                    step={1}
+                    unit={UNIT_TYPES.DAYS}
+                />
+
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        mt: 2,
+                    }}>
+                    <Box mr={2}>
+                        <Button variant="outlined" onClick={handleBack}>
+                            Назад
+                        </Button>
+                    </Box>
+                    <Button type="submit" variant="contained" disabled={isLoading}>
+                        {isLoading ? <CircularProgress size={24} /> : 'Подать заявку'}
+                    </Button>
+                </Box>
+            </form>
+
+            {responseData && (
+                <ConfirmationModal
+                    open={isModalOpen}
+                    handleClose={handleClose}
+                    message={`Поздравляем, ${responseData.fullName}. Вам одобрена ${responseData.amount}${UNIT_TYPES.CURRENCY}  на ${responseData.term} дней.`}
+                />
+            )}
+        </Layout>
     );
 };
 

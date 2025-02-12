@@ -1,28 +1,27 @@
+import { api } from '@/api/formApi';
 import { create } from 'zustand';
 
-// Определяем допустимые значения для поля gender
-const genderOptions = ['Мужской', 'Женский'] as const;
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-// Определяем интерфейс для данных формы
-export interface FormValues {
+interface FormData {
     phone: string;
     firstName: string;
     lastName: string;
-    gender: (typeof genderOptions)[number];
+    gender: 'Мужской' | 'Женский';
     address: string;
     workplace: string;
     loanAmount: number;
     loanTerm: number;
 }
 
-// Определяем интерфейс для состояния
 interface FormState {
-    formData: FormValues;
-    updateFormData: (data: Partial<FormValues>) => void;
+    formData: FormData;
+    isModalOpen: boolean;
+    updateFormData: (data: Partial<FormData>) => void;
+    toggleModalOpen: (value: boolean) => void;
     resetForm: () => void;
 }
 
-// Инициализация хранилища Zustand
 export const useFormStore = create<FormState>((set) => ({
     formData: {
         phone: '',
@@ -34,14 +33,20 @@ export const useFormStore = create<FormState>((set) => ({
         loanAmount: 200,
         loanTerm: 10,
     },
+    isModalOpen: false,
 
-    // Функция для обновления данных формы
     updateFormData: (data) =>
-        set((state) => ({ formData: { ...state.formData, ...data } })),
+        set((state) => ({
+            formData: { ...state.formData, ...data },
+        })),
 
-    // Функция для сброса данных формы
-    resetForm: () =>
-        set({
+    toggleModalOpen: (value: boolean) =>
+        set(() => ({
+            isModalOpen: value,
+        })),
+
+    resetForm: () => {
+        return set({
             formData: {
                 phone: '',
                 firstName: '',
@@ -52,5 +57,27 @@ export const useFormStore = create<FormState>((set) => ({
                 loanAmount: 200,
                 loanTerm: 10,
             },
-        }),
+        });
+    },
 }));
+
+export const useWorkplaces = () => {
+    return useQuery({
+        queryKey: ['workplaces'],
+        queryFn: api.getWorkplaces,
+    });
+};
+
+export const useSubmitForm = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (formData: FormData) => api.sendFormData(`${formData.firstName} ${formData.lastName}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['workplaces'] });
+        },
+        onError: (error) => {
+            console.error('Ошибка отправки формы:', error);
+        },
+    });
+};

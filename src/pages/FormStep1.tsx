@@ -1,131 +1,162 @@
-// 23. Оптимизированная версия FormStep1.tsx (React 19 совместимость)
-import React, { useCallback, FC } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { InputMask } from '@react-input/mask'; // ✅ Новый исправленный пакет
-import './FormStep1.scss';
+import Layout from '@/components/Layout ';
+import { useFormStore } from '@/store/formStore';
+import { userValidationSchema } from '@/utils/validationUtils';
 
-interface FormData {
+import { FC, useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+
+import { yupResolver } from '@hookform/resolvers/yup';
+import {
+    Button,
+    FormControl,
+    FormHelperText,
+    InputLabel,
+    MenuItem,
+    Select,
+    TextField,
+    Typography,
+} from '@mui/material';
+import { InputMask } from '@react-input/mask';
+
+interface IFormData {
     phone: string;
     firstName: string;
     lastName: string;
     gender: 'Мужской' | 'Женский';
 }
 
-const validationSchema = yup.object({
-    phone: yup.string()
-        .matches(/\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}/, 'Введите корректный номер телефона (11 цифр)')
-        .required('Телефон обязателен'),
-    firstName: yup.string().required('Имя обязательно'),
-    lastName: yup.string().required('Фамилия обязательна'),
-    gender: yup.string().oneOf(['Мужской', 'Женский'], 'Выберите пол').required('Пол обязателен'),
-});
-
 const FormStep1: FC = () => {
     const navigate = useNavigate();
-    const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
-        resolver: yupResolver(validationSchema),
+    const { formData, updateFormData } = useFormStore();
+
+    const {
+        control,
+        handleSubmit,
+        watch,
+        formState: { errors },
+    } = useForm<IFormData>({
+        resolver: yupResolver(userValidationSchema),
         mode: 'onBlur',
-        defaultValues: {
-            phone: '',
-            firstName: '',
-            lastName: '',
-            gender: '' as any,
+        defaultValues: JSON.parse(localStorage.getItem('formDataStep1') || '{}') || {
+            phone: formData.phone || '',
+            firstName: formData.firstName || '',
+            lastName: formData.lastName || '',
+            gender: formData.gender || 'Мужской',
         },
     });
 
-    const onSubmit = useCallback((data: FormData) => {
-        console.log('Form Data:', data);
+    useEffect(() => {
+        const subscription = watch((values) => {
+            localStorage.setItem('formDataStep1', JSON.stringify(values));
+        });
+        return () => subscription.unsubscribe();
+    }, [watch]);
+
+    const onSubmit = (data: IFormData) => {
+        updateFormData(data);
         navigate('/step2');
-    }, [navigate]);
+    };
+
+    const renderGenderMenuItems = () => {
+        const genderOptions = ['Мужской', 'Женский'];
+        return genderOptions.map((gender) => {
+            return (
+                <MenuItem key={gender} value={gender}>
+                    {gender}
+                </MenuItem>
+            );
+        });
+    };
 
     return (
-        <div className="form-wrapper">
-            <div className="form-container">
-                <h2 className="form-title">Личные данные</h2>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="form-group">
-                        <label htmlFor="phone">Телефон</label>
-                        <Controller
-                            name="phone"
-                            control={control}
-                            render={({ field }) => (
-                                <InputMask
-                                    {...field}
-                                    mask="+7 (___) ___-__-__"
-                                    replacement={{ _: /\d/ }}
-                                    className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                                    placeholder="+7 (XXX) XXX-XX-XX"
-                                    aria-label="Введите номер телефона"
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.phone?.message}</div>
-                    </div>
+        <Layout>
+            <Typography mb={3} variant="h5">
+                Личные данные
+            </Typography>
 
-                    <div className="form-group">
-                        <label htmlFor="firstName">Имя</label>
-                        <Controller
-                            name="firstName"
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    type="text"
-                                    className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
-                                    placeholder="Введите имя"
-                                    autoFocus
-                                    aria-label="Введите имя"
-                                    {...field}
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.firstName?.message}</div>
-                    </div>
+            <form onSubmit={handleSubmit(onSubmit)}>
+                <div className="form-group">
+                    <Controller
+                        name="phone"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field} // Передаем все свойства react-hook-form
+                                label="Телефон"
+                                variant="outlined"
+                                fullWidth
+                                error={!!errors.phone}
+                                helperText={errors.phone?.message}
+                                InputProps={{
+                                    inputComponent: InputMask as any, // Используем InputMask как inputComponent
+                                    inputProps: {
+                                        mask: '+7 000 000-00-00',
+                                        replacement: { '0': /\d/ },
+                                    },
+                                }}
+                            />
+                        )}
+                    />
+                </div>
 
-                    <div className="form-group">
-                        <label htmlFor="lastName">Фамилия</label>
-                        <Controller
-                            name="lastName"
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    type="text"
-                                    className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
-                                    placeholder="Введите фамилию"
-                                    aria-label="Введите фамилию"
-                                    {...field}
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.lastName?.message}</div>
-                    </div>
+                <div className="form-group">
+                    <Controller
+                        name="firstName"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Имя"
+                                variant="outlined"
+                                fullWidth
+                                error={!!errors.firstName}
+                                helperText={errors.firstName?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-                    <div className="form-group">
-                        <label htmlFor="gender">Пол</label>
-                        <Controller
-                            name="gender"
-                            control={control}
-                            render={({ field }) => (
-                                <select
-                                    className={`form-control ${errors.gender ? 'is-invalid' : ''}`}
-                                    {...field}
-                                    aria-label="Выберите пол"
-                                >
-                                    <option value="">Выберите пол</option>
-                                    <option value="Мужской">Мужской</option>
-                                    <option value="Женский">Женский</option>
-                                </select>
-                            )}
-                        />
-                        <div className="error-message">{errors.gender?.message}</div>
-                    </div>
+                <div className="form-group">
+                    <Controller
+                        name="lastName"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Фамилия"
+                                variant="outlined"
+                                fullWidth
+                                error={!!errors.lastName}
+                                helperText={errors.lastName?.message}
+                            />
+                        )}
+                    />
+                </div>
 
-                    <button type="submit" className="submit-button">Далее</button>
-                </form>
-            </div>
-        </div>
+                <div className="form-group">
+                    <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth error={!!errors.gender}>
+                                <InputLabel>Пол</InputLabel>
+                                <Select label="Пол" {...field} value={field.value || ''}>
+                                    {renderGenderMenuItems()}
+                                </Select>
+                                <FormHelperText>{errors.gender?.message}</FormHelperText>
+                            </FormControl>
+                        )}
+                    />
+                </div>
+
+                <div className="button-group">
+                    <Button type="submit" variant="contained">
+                        Далее
+                    </Button>
+                </div>
+            </form>
+        </Layout>
     );
 };
 

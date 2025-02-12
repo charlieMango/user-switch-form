@@ -1,103 +1,166 @@
-import React, { useCallback, useEffect, useState, FC } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import './FormStep2.scss';
+import { useFormStore, useWorkplaces } from '@/store/formStore';
+import { infoValidationSchema } from '@/utils/validationUtils';
 
-interface FormData {
-    workPlace: string;
+import { useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+
+import { yupResolver } from '@hookform/resolvers/yup';
+import {
+    Box,
+    Button,
+    CircularProgress,
+    FormControl,
+    FormHelperText,
+    InputLabel,
+    MenuItem,
+    Select,
+    TextField,
+    Typography,
+} from '@mui/material';
+
+interface IFormData {
+    workplace: string;
     address: string;
 }
 
-const validationSchema = yup.object({
-    workPlace: yup.string().required('Место работы обязательно'),
-    address: yup.string().required('Адрес обязателен'),
-});
-
-const FormStep2: FC = () => {
+const FormStep2 = () => {
     const navigate = useNavigate();
-    const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
-        resolver: yupResolver(validationSchema),
+    const { formData, updateFormData } = useFormStore();
+    const { data: workPlaces, isPending, error } = useWorkplaces();
+    const isLoading = isPending;
+
+    const {
+        control,
+        handleSubmit,
+        watch,
+        formState: { errors },
+    } = useForm<IFormData>({
+        resolver: yupResolver(infoValidationSchema),
         mode: 'onBlur',
-        defaultValues: {
-            workPlace: '',
-            address: '',
+        defaultValues: JSON.parse(localStorage.getItem('formDataStep2') || '{}') || {
+            workplace: formData.workplace || '',
+            address: formData.address || '',
         },
     });
 
-    const [workPlaces, setWorkPlaces] = useState<{ slug: string, name: string, url: string }[]>([]);
-
-
     useEffect(() => {
-        fetch('https://dummyjson.com/products/categories')
-            .then((response) => response.json())
-            .then(setWorkPlaces)
-            .catch(console.error);
-    }, []);
+        const subscription = watch((values) => {
+            localStorage.setItem('formDataStep2', JSON.stringify(values));
+        });
+        return () => subscription.unsubscribe();
+    }, [watch]);
 
-    useEffect(() => {
-        console.log('workPlaces', workPlaces);
-    }, [workPlaces]);
-
-    const onSubmit = useCallback((data: FormData) => {
-        console.log('Form Data:', data);
+    const onSubmit = (data: IFormData) => {
+        updateFormData(data);
         navigate('/step3');
-    }, [navigate]);
+    };
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/');
+        }
+    };
 
     return (
-        <div className="form-wrapper">
-            <div className="form-container">
-                <h2 className="form-title">Адрес и место работы</h2>
+        <Box
+            sx={{
+                maxWidth: 600,
+                mx: 'auto',
+                p: 3,
+                bgcolor: 'background.paper',
+                borderRadius: 2,
+                boxShadow: 3,
+            }}>
+            <Typography variant="h5" textAlign="center" mb={2}>
+                Адрес и место работы
+            </Typography>
+            {error && (
+                <Typography color="error">
+                    {error instanceof Error ? error.message : 'Ошибка загрузки данных'}
+                </Typography>
+            )}
+            {isLoading ? (
+                <Box display="flex" justifyContent="center">
+                    <CircularProgress />
+                </Box>
+            ) : (
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="form-group">
-                        <label htmlFor="workPlace">Место работы</label>
-                        <Controller
-                            name="workPlace"
-                            control={control}
-                            render={({ field }) => (
-                                <select
-                                    className={`form-control ${errors.workPlace ? 'is-invalid' : ''}`}
+                    <Controller
+                        name="workplace"
+                        control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.workplace}>
+                                <InputLabel>Место работы</InputLabel>
+                                <Select
+                                    label={'Место работы'}
                                     {...field}
-                                    aria-label="Выберите место работы"
-                                >
-                                    <option value="">Выберите место работы</option>
-                                    {workPlaces.map((place) => (
-                                        <option key={place.slug} value={place.name}>{place.name}</option>
+                                    value={field.value || ''}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            style: {
+                                                maxHeight: 200,
+                                                overflow: 'auto',
+                                            },
+                                        },
+                                        anchorOrigin: {
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        },
+                                        transformOrigin: {
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        },
+                                    }}>
+                                    {workPlaces?.map((place: any) => (
+                                        <MenuItem key={place} value={place}>
+                                            <span>{place}</span>
+                                        </MenuItem>
                                     ))}
-                                </select>
-                            )}
-                        />
-                        <div className="error-message">{errors.workPlace?.message}</div>
-                    </div>
+                                </Select>
+                                <FormHelperText>{errors.workplace?.message}</FormHelperText>
+                            </FormControl>
+                        )}
+                    />
 
-                    <div className="form-group">
-                        <label htmlFor="address">Адрес проживания</label>
-                        <Controller
-                            name="address"
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    type="text"
-                                    className={`form-control ${errors.address ? 'is-invalid' : ''}`}
-                                    placeholder="Введите адрес"
-                                    aria-label="Введите адрес проживания"
-                                    {...field}
-                                />
-                            )}
-                        />
-                        <div className="error-message">{errors.address?.message}</div>
-                    </div>
+                    <Controller
+                        name="address"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Адрес проживания"
+                                variant="outlined"
+                                fullWidth
+                                error={!!errors.address}
+                                helperText={errors.address?.message}
+                                sx={{ mb: 2 }}
+                            />
+                        )}
+                    />
 
-                    <div className="button-group">
-                        <button type="button" className="back-button" onClick={() => navigate('/step1')}>Назад</button>
-                        <button type="submit" className="submit-button">Далее</button>
-                    </div>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'flex-start',
+                            mt: 2,
+                        }}>
+                        <Box mr={2}>
+                            <Button variant="outlined" onClick={handleBack}>
+                                Назад
+                            </Button>
+                        </Box>
+
+                        <Button type="submit" variant="contained">
+                            Далее
+                        </Button>
+                    </Box>
                 </form>
-            </div>
-        </div>
+            )}
+        </Box>
     );
 };
 
 export default FormStep2;
-
