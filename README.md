@@ -1,50 +1,77 @@
-# React + TypeScript + Vite
+# 🚀 React SPA для сбора данных пользователя
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 📌 Описание проекта
 
-Currently, two official plugins are available:
+Данное приложение представляет собой **одностраничное приложение (SPA)**, которое позволяет пользователю заполнить последовательные формы с валидацией данных и финальным модальным окном подтверждения.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🛠 Используемые технологии
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **React** – Библиотека для создания пользовательских интерфейсов.
+- **TypeScript** – Строгая типизация для повышения надежности кода.
+- **Vite** – Быстрый инструмент для сборки проекта.
+- **React Router** – Управление маршрутами и переходами между страницами.
+- **Material UI (MUI)** – Компонентная библиотека для стилизации интерфейса.
+- **Zustand** – Легковесный стейт-менеджер.
+- **React Query** – Управление и кеширование API-запросов.
+- **Yup & React Hook Form** – Валидация и управление формами.
 
-- Configure the top-level `parserOptions` property like this:
+---
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## 🚀 Как запустить проект
+
+### 1️⃣ Установите зависимости
+
+```sh
+npm install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+или
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```sh
+yarn install
 ```
+
+### 2️⃣ Запустите локальный сервер
+
+```sh
+npm run dev
+```
+
+или
+
+```sh
+yarn dev
+```
+
+### 3️⃣ Откройте браузер и перейдите по адресу
+
+```
+http://localhost:3000/
+```
+
+---
+
+## 📂 Структура проекта
+
+```bash
+src/
+ ├── api/               # Логика API-запросов
+ ├── components/        # Переиспользуемые UI-компоненты
+ ├── pages/            # Страницы приложения
+ ├── store/            # Состояние приложения (Zustand)
+ ├── styles/           # SCSS-стили
+ ├── App.tsx           # Корневой компонент
+ ├── main.tsx          # Точка входа
+```
+
+---
+
+## 📌 Основной функционал
+
+✅ Последовательные формы с валидацией (`React Hook Form + Yup`)
+✅ Динамическое управление стейтом (`Zustand`)
+✅ Кеширование API-запросов (`React Query`)
+✅ Глобальное управление темами (`MUI`)
+✅ Анимации переходов (`Framer Motion`)
