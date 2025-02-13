@@ -5,7 +5,7 @@ import { UNIT_TYPES } from '@/constants/constants';
 import { useFormStore, useSubmitForm } from '@/store/formStore';
 import { sliderValidationSchema } from '@/utils/validationUtils';
 
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 
