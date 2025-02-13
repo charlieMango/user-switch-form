@@ -5,6 +5,8 @@ on:
         branches: [main] # Триггер на пуш в ветку main
 
 jobs:
+    permissions:
+        contents: write
     build-and-deploy:
         runs-on: ubuntu-latest
         steps:
